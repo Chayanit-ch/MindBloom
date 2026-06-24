@@ -847,7 +847,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                 {/* Chat Panel — portal to body so parent transform doesn't break fixed positioning */}
                 {showChat && createPortal(
                     <div
-                        className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[200] bg-[#f5f0eb] flex flex-col"
+                        className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-200 bg-[#f5f0eb] flex flex-col"
                         style={{ height: 'calc(100dvh - 60px)' }}
                     >
                         {/* Header */}
