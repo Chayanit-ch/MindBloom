@@ -126,9 +126,12 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
         <div className="pt-4">
             <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
 
-            <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">MOMENTUM</p>
+            <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">{isTH ? 'ความต่อเนื่อง' : 'MOMENTUM'}</p>
             <h1 className="text-2xl font-bold text-gray-800 mb-1">
-                Day <span className="text-green-700">{buddy.streak}</span> Streak
+                {isTH
+                    ? <>วันที่ <span className="text-green-700">{buddy.streak}</span> ติดต่อกัน</>
+                    : <>Day <span className="text-green-700">{buddy.streak}</span> Streak</>
+                }
             </h1>
             <p className="text-gray-400 text-sm mb-5">
                 {isTH ? 'บันทึกทุกวันเพื่อสะสม streak และแต้มครับ' : 'Record every day to build your streak and earn points.'}
@@ -210,7 +213,7 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
 
             {/* Collection */}
             <div className="flex justify-between items-center mb-3">
-                <h2 className="text-base font-bold text-gray-800">My Collection</h2>
+                <h2 className="text-base font-bold text-gray-800">{isTH ? 'คอลเลคชันของฉัน' : 'My Collection'}</h2>
                 <p className="text-xs text-gray-400">
                     {myItems.length}/{COLLECTION_ITEMS.length} {isTH ? 'ปลดล็อกแล้ว' : 'unlocked'}
                 </p>

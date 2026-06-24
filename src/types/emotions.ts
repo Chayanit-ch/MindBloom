@@ -94,7 +94,7 @@ export const TOPICS = [
   'Health', 'Fitness', 'Self-Care', 'Sleep', 'Appearance',
   'Hobbies', 'Identity', 'Spirituality', 'Future',
   'Community', 'Family', 'Friends', 'Partner', 'Dating', 'Social',
-  'School/TCAS', 'Work', 'Education', 'Finance', 'Money',
+  'School/TCAS', 'Work', 'Education', 'Finance',
   'Travel', 'Weather', 'Current Events', 'Other',
 ]
 
@@ -140,7 +140,7 @@ export const TOPIC_TH: Record<string, string> = {
   'Partner': 'คนรัก', 'Dating': 'ความรัก',
   'Social': 'สังคม', 'School/TCAS': 'เรียน/TCAS',
   'Work': 'งาน', 'Education': 'การศึกษา',
-  'Finance': 'การเงิน', 'Money': 'เงิน',
+  'Finance': 'การเงิน',
   'Travel': 'การเดินทาง', 'Weather': 'สภาพอากาศ',
   'Current Events': 'เหตุการณ์ปัจจุบัน', 'Other': 'อื่นๆ',
 }

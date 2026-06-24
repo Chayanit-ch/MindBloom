@@ -167,7 +167,7 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-[#f5f0eb]">
-            <div key={page} className="max-w-sm mx-auto px-4 pb-24">
+            <div key={page} className="animate-page max-w-sm mx-auto px-4 pb-24">
                 {page === 'buddy' && (
                     <BuddyPage
                         buddy={buddy}
@@ -185,6 +185,7 @@ export default function App() {
                         buddy={buddy}
                         lang={lang}
                         onToggleLang={toggleLang}
+                        todayRecord={records.find(r => r.date === getLocalDateStr())}
                     />
                 )}
                 {page === 'history' && (

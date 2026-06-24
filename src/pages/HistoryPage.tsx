@@ -175,7 +175,7 @@ export default function HistoryPage({ records, buddy, lang, onToggleLang }: Hist
                     {sunnyDiff >= 0
                         ? <TrendingUp size={18} className="text-green-600" />
                         : <TrendingDown size={18} className="text-red-500" />}
-                    <h3 className="font-bold text-gray-800">Weekly Growth</h3>
+                    <h3 className="font-bold text-gray-800">{isTH ? 'การเติบโตประจำสัปดาห์' : 'Weekly Growth'}</h3>
                 </div>
                 <p className="text-sm text-gray-600">
                     {sunnyDiff >= 0
@@ -196,7 +196,7 @@ export default function HistoryPage({ records, buddy, lang, onToggleLang }: Hist
                 </div>
                 <p className="text-sm font-medium text-gray-600">
                     {isTH
-                        ? <>Next milestone in <span className="font-bold text-green-700">{daysLeft} วัน</span></>
+                        ? <>อีก <span className="font-bold text-green-700">{daysLeft} วัน</span> ถึงเป้าหมายถัดไป</>
                         : <>Next milestone in <span className="font-bold text-green-700">{daysLeft} {daysLeft === 1 ? 'day' : 'days'}</span></>
                     }
                 </p>

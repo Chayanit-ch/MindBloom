@@ -4,24 +4,36 @@ import type { DailyRecord, EmotionName } from '../types'
 import Topbar from '../components/Topbar'
 import type { BuddyState } from '../types'
 import * as LucideIcons from 'lucide-react'
-import { Check, X, ClipboardCheck } from 'lucide-react'
+import { Check, X, ClipboardCheck, CheckCircle2 } from 'lucide-react'
 
 interface CheckInPageProps {
     onSave: (record: DailyRecord) => void
     buddy: BuddyState
     lang: 'th' | 'en'
     onToggleLang: () => void
+    todayRecord?: DailyRecord
 }
 
-export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: CheckInPageProps) {
-    const [stress, setStress] = useState(5)
-    const [emotion, setEmotion] = useState<EmotionName | null>(null)
-    const [topic, setTopic] = useState<string | null>(null)
-    const [journal, setJournal] = useState('')
+export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRecord }: CheckInPageProps) {
+    const isTH = lang === 'th'
+
+    // Determine initial topic state — if saved topic isn't in the list, it was a custom "Other" entry
+    const _savedTopic = todayRecord?.topic ?? ''
+    const _isCustomTopic = !!_savedTopic && !TOPICS.includes(_savedTopic)
+
+    const [stress, setStress] = useState(todayRecord?.stress ?? 5)
+    const [emotion, setEmotion] = useState<EmotionName | null>(
+        (todayRecord?.emotion as EmotionName) ?? null
+    )
+    const [topic, setTopic] = useState<string | null>(
+        _savedTopic ? (_isCustomTopic ? 'Other' : _savedTopic) : null
+    )
+    const [customTopic, setCustomTopic] = useState(_isCustomTopic ? _savedTopic : '')
+    const [journal, setJournal] = useState(todayRecord?.journal ?? '')
     const [showPopup, setShowPopup] = useState(false)
+    const [showSuccess, setShowSuccess] = useState(false)
     const [search, setSearch] = useState('')
 
-    const isTH = lang === 'th'
     const moodLabel = isTH ? getMoodLabelTH(stress) : getMoodLabel(stress)
     const suggestedEmotions = getEmotionsByLevel(stress)
     const filteredAll = ALL_EMOTIONS.filter(e =>
@@ -32,18 +44,20 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
 
     function handleSeal() {
         if (!emotion) {
-            alert(isTH ? 'กรุณาเลือกอารมณ์ก่อนนะครับ' : 'Please select an emotion first.')
+            alert(isTH ? 'กรุณาเลือกอารมณ์ก่อนนะ' : 'Please select an emotion first.')
             return
         }
+        const n = new Date()
         const record: DailyRecord = {
-            date: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}` })(),
+            date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`,
             stress,
             emotion,
-            topic: topic ?? '',
+            topic: (topic === 'Other' && customTopic.trim()) ? customTopic.trim() : (topic ?? ''),
             journal,
             timestamp: Date.now(),
         }
-        onSave(record)
+        setShowSuccess(true)
+        setTimeout(() => onSave(record), 2500)
     }
 
     function displayEmotion(name: string) {
@@ -54,9 +68,28 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
         return isTH ? (TOPIC_TH[t] ?? t) : t
     }
 
+    const stepLabel = (n: string) => isTH ? `ขั้นที่ ${n}` : `STEP ${n}`
+
     return (
         <div className="pt-4">
             <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+
+            {/* Success Popup */}
+            {showSuccess && (
+                <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center px-6 animate-overlay">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl text-center w-full max-w-xs animate-scale-in">
+                        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 size={32} className="text-green-500" />
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-xl mb-1">
+                            {isTH ? 'บันทึกสำเร็จ!' : 'Saved!'}
+                        </h3>
+                        <p className="text-gray-400 text-sm">
+                            {isTH ? 'บันทึกอารมณ์วันนี้เรียบร้อยแล้ว' : "Today's mood has been recorded."}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Title */}
             <div className="mb-6">
@@ -73,7 +106,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
 
             {/* Step 1: Mood Level */}
             <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-50 animate-step-1">
-                <p className="text-[10px] text-gray-400 font-bold tracking-widest mb-1">STEP 01</p>
+                <p className="text-[10px] text-gray-400 font-bold tracking-widest mb-1">{stepLabel('01')}</p>
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-800 text-base">
                         {isTH ? 'วันนี้เป็นยังไงบ้าง?' : 'How was your day?'}
@@ -106,7 +139,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
 
             {/* Step 2: Emotion */}
             <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-50 animate-step-2">
-                <p className="text-[10px] text-gray-400 font-bold tracking-widest mb-1">STEP 02</p>
+                <p className="text-[10px] text-gray-400 font-bold tracking-widest mb-1">{stepLabel('02')}</p>
                 <h3 className="font-bold text-gray-800 text-base mb-1">
                     {isTH ? 'อารมณ์ที่รู้สึกตอนนี้' : 'Current Emotion'}
                 </h3>
@@ -149,7 +182,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
 
             {/* Step 3: Topic */}
             <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-50 animate-step-3">
-                <p className="text-[10px] text-gray-400 font-bold tracking-widests mb-1">STEP 03</p>
+                <p className="text-[10px] text-gray-400 font-bold tracking-widest mb-1">{stepLabel('03')}</p>
                 <h3 className="font-bold text-gray-800 text-base mb-4">
                     {isTH ? 'กำลังคิดเรื่องอะไรอยู่?' : "What's on your mind?"}
                 </h3>
@@ -157,7 +190,10 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
                     {TOPICS.map((t) => (
                         <button
                             key={t}
-                            onClick={() => setTopic(topic === t ? null : t)}
+                            onClick={() => {
+                                setTopic(topic === t ? null : t)
+                                if (t !== 'Other') setCustomTopic('')
+                            }}
                             className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-150 active:scale-[0.97] ${topic === t
                                 ? 'bg-[#2d5a27] border-[#2d5a27] text-white'
                                 : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-green-300 hover:bg-green-50'
@@ -167,12 +203,24 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
                         </button>
                     ))}
                 </div>
+
+                {topic === 'Other' && (
+                    <div className="mt-3 animate-step-1">
+                        <input
+                            type="text"
+                            placeholder={isTH ? 'ระบุเหตุผล...' : 'Describe your reason...'}
+                            value={customTopic}
+                            onChange={e => setCustomTopic(e.target.value)}
+                            className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-600 outline-none border border-green-200 focus:border-green-400 focus:bg-white transition-all duration-200 placeholder:text-gray-300"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Step 4: Journal */}
             <div className="bg-white rounded-2xl p-5 mb-5 shadow-sm border border-gray-50 animate-step-4">
                 <div className="flex justify-between items-center mb-1">
-                    <p className="text-[10px] text-gray-400 font-bold tracking-widests">STEP 04</p>
+                    <p className="text-[10px] text-gray-400 font-bold tracking-widest">{stepLabel('04')}</p>
                     <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded-full font-medium">
                         {isTH ? 'ไม่บังคับ' : 'Optional'}
                     </span>
@@ -191,13 +239,14 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang }: Check
             {/* Seal Button */}
             <button
                 onClick={handleSeal}
-                className="w-full bg-[#2d5a27] hover:bg-[#1e3d1a] active:scale-[0.98] text-white rounded-2xl py-4 font-semibold text-base transition-all duration-150 mb-2 shadow-sm flex items-center justify-center gap-2 animate-step-5"
+                disabled={showSuccess}
+                className="w-full bg-[#2d5a27] hover:bg-[#1e3d1a] active:scale-[0.98] text-white rounded-2xl py-4 font-semibold text-base transition-all duration-150 mb-2 shadow-sm flex items-center justify-center gap-2 animate-step-5 disabled:opacity-60"
             >
                 <ClipboardCheck size={20} />
                 {isTH ? 'บันทึกวันนี้' : 'Seal the Capsule'}
             </button>
             <p className="text-center text-[10px] text-gray-300 mb-8 tracking-widest font-medium">
-                SAFE & PRIVATE • ENCRYPTION ACTIVE
+                {isTH ? 'ข้อมูลของคุณปลอดภัยและเป็นส่วนตัว' : 'SAFE & PRIVATE • ENCRYPTION ACTIVE'}
             </p>
 
             {/* Popup — All Emotions */}

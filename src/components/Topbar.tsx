@@ -69,16 +69,16 @@ export default function Topbar({ buddy, lang = 'th', onToggleLang }: TopbarProps
               <div className="flex justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <Flame size={11} className="text-orange-500" />
-                  <span>Streak</span>
+                  <span>{lang === 'th' ? 'วันต่อเนื่อง' : 'Streak'}</span>
                 </div>
                 <span className="font-bold text-gray-700">{buddy?.streak ?? 0} {lang === 'th' ? 'วัน' : 'days'}</span>
               </div>
               <div className="flex justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <BarChart2 size={11} className="text-blue-500" />
-                  <span>Level</span>
+                  <span>{lang === 'th' ? 'ระดับ' : 'Level'}</span>
                 </div>
-                <span className="font-bold text-gray-700">LVL {buddy?.level ?? 1}</span>
+                <span className="font-bold text-gray-700">{lang === 'th' ? `ระดับ ${buddy?.level ?? 1}` : `LVL ${buddy?.level ?? 1}`}</span>
               </div>
             </div>
 

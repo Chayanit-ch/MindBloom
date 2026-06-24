@@ -193,7 +193,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
                 <div className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
                     <div className="flex items-center gap-1 mb-2">
                         <Heart size={12} className="text-red-400" />
-                        <span className="text-xs font-bold text-gray-400 tracking-wide">HAPPINESS</span>
+                        <span className="text-xs font-bold text-gray-400 tracking-wide">{isTH ? 'ความสุข' : 'HAPPINESS'}</span>
                     </div>
                     <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
                         <div className="h-full bg-green-500 rounded-full transition-all duration-700" style={{ width: `${buddy.happiness}%` }} />
@@ -205,7 +205,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1">
                             <Zap size={12} className="text-purple-400" />
-                            <span className="text-xs font-bold text-gray-400 tracking-wide">GROWTH</span>
+                            <span className="text-xs font-bold text-gray-400 tracking-wide">{isTH ? 'การเติบโต' : 'GROWTH'}</span>
                         </div>
                         <span className="text-xs font-bold text-purple-500 bg-purple-50 px-2 py-0.5 rounded-full">LVL {buddy.level}</span>
                     </div>
@@ -216,7 +216,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
                 </div>
 
                 <div className="bg-[#ede8f5] rounded-2xl p-4 hover:shadow-md transition-all duration-200">
-                    <p className="text-xs text-purple-400 font-bold tracking-wide mb-2">BALANCE</p>
+                    <p className="text-xs text-purple-400 font-bold tracking-wide mb-2">{isTH ? 'ยอดแต้ม' : 'BALANCE'}</p>
                     <div className="flex items-center gap-1.5">
                         <Star size={16} className="text-yellow-500 fill-yellow-400" />
                         <span className="font-bold text-gray-700 text-lg">{buddy.points}</span>
@@ -225,7 +225,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
                 </div>
 
                 <div className="bg-[#e8f0e8] rounded-2xl p-4 hover:shadow-md transition-all duration-200">
-                    <p className="text-xs text-green-600 font-bold tracking-wide mb-2">STREAK</p>
+                    <p className="text-xs text-green-600 font-bold tracking-wide mb-2">{isTH ? 'ต่อเนื่อง' : 'STREAK'}</p>
                     <div className="flex items-center gap-1.5">
                         <Flame size={16} className="text-orange-500" />
                         <span className="font-bold text-gray-700 text-lg">{buddy.streak}</span>
@@ -237,7 +237,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
             {/* Daily Quests */}
             <div className="bg-[#2d5a27] rounded-2xl p-5 mb-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                    <span className="bg-white/20 text-white text-xs font-bold tracking-widest px-3 py-1 rounded-full">DAILY QUEST</span>
+                    <span className="bg-white/20 text-white text-xs font-bold tracking-widest px-3 py-1 rounded-full">{isTH ? 'เควสประจำวัน' : 'DAILY QUEST'}</span>
                     <span className="text-white/50 text-xs">
                         {(checkedInToday ? 1 : 0) + completedQuests.length}/3 {isTH ? 'เสร็จแล้ว' : 'done'}
                     </span>

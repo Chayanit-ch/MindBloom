@@ -3,6 +3,7 @@ import { EMOTIONS, EMOTION_ICON } from '../types/emotions'
 import * as LucideIcons from 'lucide-react'
 import { TrendingUp, MessageCircle, ArrowLeft, Send, AlertTriangle, Phone, ClipboardList, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getCopingSuggestion } from '../hooks/useGemini'
 import Topbar from '../components/Topbar'
 import type { BuddyState } from '../types'
@@ -230,48 +231,118 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
         const w = canvas.offsetWidth
         const h = canvas.offsetHeight
         const pad = 24
-        const dataPoints = chartData.filter(d => d.hasData)
-        if (dataPoints.length < 2) {
-            ctx.fillStyle = '#ccc'
-            ctx.font = '13px sans-serif'
-            ctx.textAlign = 'center'
+        const stepX = (w - pad * 2) / (chartData.length - 1)
+        const maxVal = 10
+
+        // Pre-compute pixel coords for data points only
+        const pts = chartData
+            .map((d, i) => d.hasData
+                ? { x: pad + i * stepX, y: h - pad - (d.stress / maxVal) * (h - pad * 2), day: d.day }
+                : null
+            )
+            .filter((p): p is { x: number; y: number; day: string } => p !== null)
+
+        // Not enough data — draw placeholder and bail
+        if (pts.length < 2) {
+            ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1
+            for (let i = 0; i <= 4; i++) {
+                const y = pad + (i / 4) * (h - pad * 2)
+                ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke()
+            }
+            ctx.fillStyle = '#ccc'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'
             ctx.fillText(isTH ? 'บันทึกอย่างน้อย 2 วันเพื่อดูกราฟ' : 'Log at least 2 days to see the chart', w / 2, h / 2)
             return
         }
-        const stepX = (w - pad * 2) / (chartData.length - 1)
-        const maxVal = 10
-        ctx.strokeStyle = '#f0f0f0'
-        ctx.lineWidth = 1
-        for (let i = 0; i <= 4; i++) {
-            const y = pad + (i / 4) * (h - pad * 2)
-            ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke()
+
+        // Catmull-Rom cardinal spline → smooth bezier curve through points
+        const smoothPath = (points: { x: number; y: number }[], tension = 0.35) => {
+            ctx.moveTo(points[0].x, points[0].y)
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[Math.max(0, i - 1)]
+                const p1 = points[i]
+                const p2 = points[i + 1]
+                const p3 = points[Math.min(points.length - 1, i + 2)]
+                ctx.bezierCurveTo(
+                    p1.x + (p2.x - p0.x) * tension,
+                    p1.y + (p2.y - p0.y) * tension,
+                    p2.x - (p3.x - p1.x) * tension,
+                    p2.y - (p3.y - p1.y) * tension,
+                    p2.x, p2.y
+                )
+            }
         }
-        ctx.beginPath()
-        ctx.strokeStyle = '#2d5a27'
-        ctx.lineWidth = 2.5
-        ctx.lineJoin = 'round'
-        ctx.lineCap = 'round'
-        let started = false
-        chartData.forEach((d, i) => {
-            if (!d.hasData) return
-            const x = pad + i * stepX
-            const y = h - pad - (d.stress / maxVal) * (h - pad * 2)
-            if (!started) { ctx.moveTo(x, y); started = true } else ctx.lineTo(x, y)
-        })
-        ctx.stroke()
-        chartData.forEach((d, i) => {
-            if (!d.hasData) return
-            const x = pad + i * stepX
-            const y = h - pad - (d.stress / maxVal) * (h - pad * 2)
-            ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2)
-            ctx.fillStyle = '#2d5a27'; ctx.fill()
-            ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke()
-        })
-        ctx.fillStyle = '#bbb'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'
-        chartData.forEach((d, i) => {
-            if (chartView === 'month' && i % 5 !== 0) return
-            ctx.fillText(d.day, pad + i * stepX, h - 4)
-        })
+
+        const draw = (progress: number) => {
+            ctx.clearRect(0, 0, w, h)
+
+            // Grid lines (always fully visible)
+            ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1
+            for (let i = 0; i <= 4; i++) {
+                const y = pad + (i / 4) * (h - pad * 2)
+                ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke()
+            }
+
+            // Clip region grows left → right as progress 0 → 1
+            const clipW = pad + (w - pad) * progress
+            ctx.save()
+            ctx.beginPath()
+            ctx.rect(0, 0, clipW, h)
+            ctx.clip()
+
+            // Gradient fill under smooth curve
+            const gradient = ctx.createLinearGradient(0, pad, 0, h - pad)
+            gradient.addColorStop(0, 'rgba(45, 90, 39, 0.22)')
+            gradient.addColorStop(0.55, 'rgba(45, 90, 39, 0.08)')
+            gradient.addColorStop(1, 'rgba(45, 90, 39, 0)')
+            ctx.beginPath()
+            smoothPath(pts)
+            ctx.lineTo(pts[pts.length - 1].x, h - pad)
+            ctx.lineTo(pts[0].x, h - pad)
+            ctx.closePath()
+            ctx.fillStyle = gradient
+            ctx.fill()
+
+            // Smooth line stroke
+            ctx.beginPath()
+            ctx.strokeStyle = '#2d5a27'
+            ctx.lineWidth = 2.5
+            ctx.lineJoin = 'round'
+            ctx.lineCap = 'round'
+            smoothPath(pts)
+            ctx.stroke()
+
+            ctx.restore()
+
+            // Dots drawn outside clip so they appear as full circles at the leading edge
+            pts.forEach(p => {
+                if (p.x > clipW + 4) return
+                ctx.beginPath()
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2)
+                ctx.fillStyle = '#2d5a27'; ctx.fill()
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke()
+            })
+
+            // Day labels
+            ctx.fillStyle = '#bbb'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'
+            chartData.forEach((d, i) => {
+                if (chartView === 'month' && i % 5 !== 0) return
+                ctx.fillText(d.day, pad + i * stepX, h - 4)
+            })
+        }
+
+        // Animate draw-in over 900 ms with ease-out cubic
+        const duration = 900
+        let startTime: number | null = null
+        let animId = 0
+        const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+        const animate = (ts: number) => {
+            if (!startTime) startTime = ts
+            const t = Math.min((ts - startTime) / duration, 1)
+            draw(easeOut(t))
+            if (t < 1) animId = requestAnimationFrame(animate)
+        }
+        animId = requestAnimationFrame(animate)
+        return () => cancelAnimationFrame(animId)
     }, [records, chartView, chartData, isTH])
 
     const last14 = records.filter(r => NOW_TIME - new Date(r.date).getTime() <= 14 * 24 * 60 * 60 * 1000)
@@ -306,7 +377,9 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
 
     const recent7 = records.filter(r => NOW_TIME - new Date(r.date).getTime() <= 7 * 24 * 60 * 60 * 1000)
     const avgStress = recent7.length > 0 ? recent7.reduce((s, r) => s + r.stress, 0) / recent7.length : 0
-    const trendLabel = avgStress >= 7 ? 'Stable' : avgStress >= 5 ? 'Neutral' : avgStress > 0 ? 'Watch' : 'No Data'
+    const trendLabel = isTH
+        ? (avgStress >= 7 ? 'มั่นคง' : avgStress >= 5 ? 'ปานกลาง' : avgStress > 0 ? 'ระวัง' : 'ไม่มีข้อมูล')
+        : (avgStress >= 7 ? 'Stable' : avgStress >= 5 ? 'Neutral' : avgStress > 0 ? 'Watch' : 'No Data')
 
     function startTest(type: 'phq9' | 'pss10' | 'gad7') {
         setActiveTest(type)
@@ -436,19 +509,26 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
         <div className="pt-4">
             <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
 
-            <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">WEEKLY REFLECTIONS</p>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">
-                Gentle <span className="text-green-700 italic">Clarity</span> for your Mind.
-            </h1>
-            <p className="text-gray-400 text-sm mb-5">
-                {isTH ? 'ทบทวนอารมณ์และความรู้สึกของสัปดาห์นี้' : "Review this week's emotions and feelings."}
-            </p>
+            <div className="animate-step-1 mb-5">
+                <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">
+                    {isTH ? 'สะท้อนความรู้สึก' : 'WEEKLY REFLECTIONS'}
+                </p>
+                <h1 className="text-2xl font-bold text-gray-800 mb-1">
+                    {isTH
+                        ? <>ดูแลใจ<span className="text-green-700 italic">อย่างอ่อนโยน</span></>
+                        : <>Gentle <span className="text-green-700 italic">Clarity</span> for your Mind.</>
+                    }
+                </h1>
+                <p className="text-gray-400 text-sm">
+                    {isTH ? 'ทบทวนอารมณ์และความรู้สึกของสัปดาห์นี้' : "Review this week's emotions and feelings."}
+                </p>
+            </div>
 
             {/* Chart */}
-            <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-50">
+            <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-50 animate-step-2">
                 <div className="flex justify-between items-center mb-3">
                     <div>
-                        <h3 className="font-bold text-gray-800">Mood Trends</h3>
+                        <h3 className="font-bold text-gray-800">{isTH ? 'แนวโน้มอารมณ์' : 'Mood Trends'}</h3>
                         <p className="text-xs text-gray-400">{isTH ? 'แนวโน้มอารมณ์ของคุณ' : 'Your emotional ebb and flow'}</p>
                     </div>
                     <div className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1.5">
@@ -469,11 +549,11 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
 
             {/* AI Companion */}
             {topEmotion && (
-                <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-50">
+                <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-50 animate-step-3">
                     <div className="flex justify-between items-center mb-3">
-                        <p className="text-xs text-gray-400 font-bold tracking-widest">AI COMPANION</p>
+                        <p className="text-xs text-gray-400 font-bold tracking-widest">{isTH ? 'AI คู่หู' : 'AI COMPANION'}</p>
                         <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium border border-green-100">
-                            Synced: {topEmotion[0]}
+                            {isTH ? `ซิงค์: ${topEmotion[0]}` : `Synced: ${topEmotion[0]}`}
                         </span>
                     </div>
                     <div className="flex gap-3 items-start">
@@ -484,7 +564,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                             }
                         </div>
                         <div className="flex-1">
-                            <p className="font-bold text-gray-800 text-sm">A Thought for You</p>
+                            <p className="font-bold text-gray-800 text-sm">{isTH ? 'ข้อคิดสำหรับวันนี้' : 'A Thought for You'}</p>
                             <p className="text-sm text-gray-500 mt-1 leading-relaxed italic">
                                 {isLoading
                                     ? <span className="text-gray-300">{isTH ? 'กำลังคิดคำแนะนำให้...' : 'Thinking of a suggestion...'}</span>
@@ -499,7 +579,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
             {/* Chat Button */}
             <button
                 onClick={() => setShowChat(true)}
-                className="w-full bg-[#2d5a27] hover:bg-[#1e3d1a] active:scale-95 text-white rounded-2xl p-4 mb-4 flex items-center justify-between transition-all shadow-sm"
+                className="w-full bg-[#2d5a27] hover:bg-[#1e3d1a] active:scale-95 text-white rounded-2xl p-4 mb-4 flex items-center justify-between transition-all shadow-sm animate-step-3"
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -515,7 +595,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
 
             {/* Early Warning */}
             {warning && (
-                <div className={`border rounded-2xl p-4 mb-4 ${warning.color}`}>
+                <div className={`border rounded-2xl p-4 mb-4 animate-step-4 ${warning.color}`}>
                     <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle size={15} className={warning.text} />
                         <p className={`font-bold text-sm ${warning.text}`}>{warning.label}</p>
@@ -525,7 +605,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
             )}
 
             {/* Assessment */}
-            <div className="mb-4">
+            <div className="mb-4 animate-step-4">
                 <h2 className="text-base font-bold text-gray-800 mb-1">
                     {isTH ? 'แบบประเมินสุขภาพจิต' : 'Mental Health Assessments'}
                 </h2>
@@ -536,9 +616,9 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                 </p>
                 <div className="flex gap-2 flex-wrap mb-3">
                     {([
-                        { key: 'phq9',  label: 'PHQ-9', sub: isTH ? 'ประเมินภาวะซึมเศร้า' : 'Depression',  color: 'hover:border-green-200 hover:bg-green-50',   iconColor: 'text-green-600',  count: isTH ? '9 ข้อ' : '9 items'  },
-                        { key: 'gad7',  label: 'GAD-7', sub: isTH ? 'ประเมินโรควิตกกังวล' : 'Anxiety',    color: 'hover:border-orange-200 hover:bg-orange-50', iconColor: 'text-orange-500', count: isTH ? '7 ข้อ' : '7 items'  },
-                        { key: 'pss10', label: 'PSS-10',sub: isTH ? 'ประเมินระดับความเครียด' : 'Stress',  color: 'hover:border-purple-200 hover:bg-purple-50', iconColor: 'text-purple-600', count: isTH ? '10 ข้อ' : '10 items' },
+                        { key: 'phq9', label: 'PHQ-9', sub: isTH ? 'ประเมินภาวะซึมเศร้า' : 'Depression', color: 'hover:border-green-200 hover:bg-green-50', iconColor: 'text-green-600', count: isTH ? '9 ข้อ' : '9 items' },
+                        { key: 'gad7', label: 'GAD-7', sub: isTH ? 'ประเมินโรควิตกกังวล' : 'Anxiety', color: 'hover:border-orange-200 hover:bg-orange-50', iconColor: 'text-orange-500', count: isTH ? '7 ข้อ' : '7 items' },
+                        { key: 'pss10', label: 'PSS-10', sub: isTH ? 'ประเมินระดับความเครียด' : 'Stress', color: 'hover:border-purple-200 hover:bg-purple-50', iconColor: 'text-purple-600', count: isTH ? '10 ข้อ' : '10 items' },
                     ] as const).map(t => {
                         const trend = getTrend(t.key === 'phq9' ? 'PHQ9' : t.key === 'gad7' ? 'GAD7' : 'PSS10')
                         return (
@@ -623,7 +703,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                 )}
 
                 {/* Support Circle */}
-                <h2 className="text-base font-bold text-gray-800 mb-3">Support Circle</h2>
+                <h2 className="text-base font-bold text-gray-800 mb-3">{isTH ? 'แหล่งช่วยเหลือ' : 'Support Circle'}</h2>
                 <button
                     onClick={() => setShowCallConfirm(true)}
                     className="w-full bg-[#fde8e8] rounded-2xl p-4 flex items-center gap-4 hover:opacity-90 transition-all mb-6"
@@ -643,8 +723,8 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                 {/* Call Confirm */}
                 {showCallConfirm && (
                     <>
-                        <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setShowCallConfirm(false)} />
-                        <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-6 pb-10">
+                        <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setShowCallConfirm(false)} />
+                        <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-6 pb-10 animate-sheet">
                             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                             <div className="text-center mb-5">
                                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -764,9 +844,13 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                     </>
                 )}
 
-                {/* Chat Panel */}
-                {showChat && (
-                    <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-sm h-screen z-999 bg-[#f5f0eb] flex flex-col">
+                {/* Chat Panel — portal to body so parent transform doesn't break fixed positioning */}
+                {showChat && createPortal(
+                    <div
+                        className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-[200] bg-[#f5f0eb] flex flex-col"
+                        style={{ height: 'calc(100dvh - 60px)' }}
+                    >
+                        {/* Header */}
                         <div className="flex items-center gap-3 px-4 py-4 bg-white shadow-sm shrink-0">
                             <button onClick={() => setShowChat(false)} className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
                                 <ArrowLeft size={18} className="text-gray-600" />
@@ -781,6 +865,8 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                                 </div>
                             </div>
                         </div>
+
+                        {/* Disclaimer */}
                         <div className="bg-yellow-50 border-b border-yellow-100 px-4 py-2 shrink-0">
                             <p className="text-xs text-yellow-700">
                                 {isTH
@@ -788,7 +874,9 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                                     : 'Bloom is a preliminary assistant only — not a psychiatrist and cannot diagnose conditions.'}
                             </p>
                         </div>
-                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3">
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
                             {messages.map((msg, i) => (
                                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     {msg.role === 'ai' && (
@@ -817,6 +905,8 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                             )}
                             <div ref={bottomRef} />
                         </div>
+
+                        {/* Input — sits just above the navbar */}
                         <div className="shrink-0 px-4 py-3 bg-white border-t border-gray-100">
                             <div className="flex items-end gap-2">
                                 <textarea
@@ -836,7 +926,8 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         </div>
