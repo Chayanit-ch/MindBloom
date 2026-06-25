@@ -2,6 +2,7 @@ import * as LucideIcons from 'lucide-react'
 import { Heart, Zap, ChevronRight, Shirt, CheckCircle2, Star, Flame, PenLine, Package, AlertTriangle } from 'lucide-react'
 import type { BuddyState, PageName, DailyRecord } from '../types'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import Topbar from '../components/Topbar'
 
 interface BuddyPageProps {
@@ -12,6 +13,8 @@ interface BuddyPageProps {
     records: DailyRecord[]
     lang: 'th' | 'en'
     onToggleLang: () => void
+    isAdmin?: boolean
+    onOpenAdmin?: () => void
 }
 
 function DynIcon({ name, size = 18, className = '' }: { name: string; size?: number; className?: string }) {
@@ -81,7 +84,7 @@ function getLocalDateStr(date: Date = new Date()): string {
     return `${y}-${m}-${d}`
 }
 
-export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBuddy, records, lang, onToggleLang }: BuddyPageProps) {
+export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBuddy, records, lang, onToggleLang, isAdmin, onOpenAdmin }: BuddyPageProps) {
     const [showItemPicker, setShowItemPicker] = useState(false)
     const [showAvatarPicker, setShowAvatarPicker] = useState(false)
     const [activeQuest, setActiveQuest] = useState<typeof BONUS_QUESTS[0] | null>(null)
@@ -152,7 +155,7 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
 
     return (
         <div className="pt-4">
-            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} isAdmin={isAdmin} onOpenAdmin={onOpenAdmin} />
 
             {/* Buddy Card */}
             <div className={`${config.bg} rounded-2xl p-6 text-center mb-4 shadow-sm transition-all duration-500 relative overflow-hidden`}>
@@ -353,10 +356,10 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
             )}
 
             {/* Avatar Picker Popup */}
-            {showAvatarPicker && (
+            {showAvatarPicker && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setShowAvatarPicker(false)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 max-h-[80vh] flex flex-col animate-sheet">
+                    <div className="fixed inset-0 bg-black/40 z-199 animate-overlay" onClick={() => setShowAvatarPicker(false)} />
+                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-200 max-h-[80vh] flex flex-col animate-sheet" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                         <div className="px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
                             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
                             <h3 className="font-bold text-gray-800">{isTH ? 'เปลี่ยนตัวละคร' : 'Change Avatar'}</h3>
@@ -415,7 +418,8 @@ export default function BuddyPage({ buddy, onNavigate, onBeginQuest, onUpdateBud
                             )}
                         </div>
                     </div>
-                </>
+                </>,
+                document.body
             )}
 
             {/* Quest Detail Popup */}

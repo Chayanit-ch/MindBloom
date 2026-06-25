@@ -18,6 +18,8 @@ interface InsightsPageProps {
     buddy: BuddyState
     lang: 'th' | 'en'
     onToggleLang: () => void
+    isAdmin?: boolean
+    onOpenAdmin?: () => void
 }
 
 interface Message {
@@ -120,7 +122,7 @@ function getLocalDateStr(date: Date = new Date()): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-export default function InsightsPage({ records, buddy, lang, onToggleLang }: InsightsPageProps) {
+export default function InsightsPage({ records, buddy, lang, onToggleLang, isAdmin, onOpenAdmin }: InsightsPageProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const bottomRef = useRef<HTMLDivElement>(null)
     const isTH = lang === 'th'
@@ -507,7 +509,7 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
 
     return (
         <div className="pt-4">
-            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} isAdmin={isAdmin} onOpenAdmin={onOpenAdmin} />
 
             <div className="animate-step-1 mb-5">
                 <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">
@@ -721,10 +723,12 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                 </button>
 
                 {/* Call Confirm */}
-                {showCallConfirm && (
+                {showCallConfirm && createPortal(
                     <>
-                        <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setShowCallConfirm(false)} />
-                        <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-6 pb-10 animate-sheet">
+                        <div className="fixed inset-0 bg-black/40 z-9998" onClick={() => setShowCallConfirm(false)} />
+                        <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl"
+                             style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div className="p-5 pb-20">
                             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                             <div className="text-center mb-5">
                                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -749,14 +753,19 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                                 {isTH ? 'ยกเลิก' : 'Cancel'}
                             </button>
                         </div>
-                    </>
+                        </div>
+                    </>,
+                    document.body
                 )}
 
                 {/* Test Popup */}
-                {activeTest && (
+                {activeTest && createPortal(
                     <>
-                        <div className="fixed inset-0 bg-black/40 z-40" />
-                        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex flex-col bg-[#f5f0eb] max-w-sm mx-auto">
+                        <div className="fixed inset-0 bg-black/40 z-199" />
+                        <div
+                            className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-sm z-200 bg-[#f5f0eb] flex flex-col"
+                            style={{ height: 'calc(100dvh - 60px)' }}
+                        >
                             <div className="bg-white px-5 py-4 shadow-sm shrink-0">
                                 <div className="flex justify-between items-center mb-3">
                                     <div>
@@ -841,7 +850,8 @@ export default function InsightsPage({ records, buddy, lang, onToggleLang }: Ins
                                 )}
                             </div>
                         </div>
-                    </>
+                    </>,
+                    document.body
                 )}
 
                 {/* Chat Panel — portal to body so parent transform doesn't break fixed positioning */}

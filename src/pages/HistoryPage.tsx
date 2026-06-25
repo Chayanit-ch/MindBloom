@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import type { DailyRecord } from '../types'
 import { ChevronLeft, ChevronRight, Lock, X, Calendar, TrendingUp, TrendingDown, Sprout } from 'lucide-react'
 import Topbar from '../components/Topbar'
@@ -11,6 +12,8 @@ interface HistoryPageProps {
     buddy: BuddyState
     lang: 'th' | 'en'
     onToggleLang: () => void
+    isAdmin?: boolean
+    onOpenAdmin?: () => void
 }
 
 const MONTH_NAMES_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
@@ -60,7 +63,7 @@ function getEmotionIcon(emotionName: string): { icon: string; color: string } {
     return EMOTION_ICON[emotionName] ?? { icon: 'Smile', color: 'text-gray-400' }
 }
 
-export default function HistoryPage({ records, buddy, lang, onToggleLang }: HistoryPageProps) {
+export default function HistoryPage({ records, buddy, lang, onToggleLang, isAdmin, onOpenAdmin }: HistoryPageProps) {
     const nowTime = useMemo(() => new Date().getTime(), [])
     const now = new Date()
     const [year, setYear] = useState(now.getFullYear())
@@ -108,7 +111,7 @@ export default function HistoryPage({ records, buddy, lang, onToggleLang }: Hist
 
     return (
         <div className="pt-4">
-            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} isAdmin={isAdmin} onOpenAdmin={onOpenAdmin} />
 
             <h1 className="text-2xl font-bold text-gray-800 mb-1">
                 {isTH ? 'ประวัติอารมณ์' : 'Mood History'}
@@ -203,10 +206,12 @@ export default function HistoryPage({ records, buddy, lang, onToggleLang }: Hist
             </div>
 
             {/* Popup Overlay */}
-            {selectedRecord && (
+            {selectedRecord && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setSelectedRecord(null)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 animate-sheet">
+                    <div className="fixed inset-0 bg-black/40 z-9998" onClick={() => setSelectedRecord(null)} />
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl"
+                         style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                    <div className="p-5 pb-20">
                         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
 
                         <div className="flex justify-between items-start mb-4">
@@ -277,7 +282,9 @@ export default function HistoryPage({ records, buddy, lang, onToggleLang }: Hist
                             </div>
                         )}
                     </div>
-                </>
+                    </div>
+                </>,
+                document.body
             )}
         </div>
     )

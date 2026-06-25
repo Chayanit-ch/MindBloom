@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { User, LogOut, Sprout, Star, Flame, BarChart2 } from 'lucide-react'
+import { User, LogOut, Sprout, Star, Flame, BarChart2, ShieldCheck } from 'lucide-react'
 import { auth } from '../firebase'
 import { signOut } from 'firebase/auth'
 import type { BuddyState } from '../types'
@@ -8,14 +8,17 @@ interface TopbarProps {
   buddy?: BuddyState
   lang?: 'th' | 'en'
   onToggleLang?: () => void
+  isAdmin?: boolean
+  onOpenAdmin?: () => void
 }
 
-export default function Topbar({ buddy, lang = 'th', onToggleLang }: TopbarProps) {
+export default function Topbar({ buddy, lang = 'th', onToggleLang, isAdmin, onOpenAdmin }: TopbarProps) {
   const [showProfile, setShowProfile] = useState(false)
   const user = auth.currentUser
 
   return (
-    <div className="flex justify-between items-center mb-6 relative">
+    <div className="sticky top-0 z-30 bg-[#f5f0eb] -mx-4 px-4 mb-6">
+    <div className="flex justify-between items-center py-3 relative">
 
       {/* Profile Button */}
       <button
@@ -27,14 +30,25 @@ export default function Topbar({ buddy, lang = 'th', onToggleLang }: TopbarProps
 
       <h2 className="font-bold text-green-800 text-base tracking-wide">MindBloom</h2>
 
-      {/* Language Toggle */}
-      <button
-        onClick={onToggleLang}
-        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200 active:scale-90 transition-all duration-150"
-        title={lang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
-      >
-        {lang === 'th' ? '🇹🇭' : '🇺🇸'}
-      </button>
+      {/* Right side: admin button (if admin) + language toggle */}
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            className="flex items-center gap-1.5 bg-red-50 text-red-600 rounded-full px-3 py-1.5 text-xs font-bold hover:bg-red-100 active:scale-90 transition-all duration-150"
+          >
+            <ShieldCheck size={14} />
+            Admin
+          </button>
+        )}
+        <button
+          onClick={onToggleLang}
+          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200 active:scale-90 transition-all duration-150"
+          title={lang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+        >
+          {lang === 'th' ? '🇹🇭' : '🇺🇸'}
+        </button>
+      </div>
 
       {/* Dropdown */}
       {showProfile && (
@@ -93,6 +107,7 @@ export default function Topbar({ buddy, lang = 'th', onToggleLang }: TopbarProps
           </div>
         </>
       )}
+    </div>
     </div>
   )
 }

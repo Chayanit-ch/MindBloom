@@ -29,3 +29,33 @@ dist-ssr
 .env.*.local
 node_modules/
 dist/
+
+serviceAccountKey.json
+
+# Firebase
+serviceAccountKey.json
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+firestore.rules
+fixEmails.cjs

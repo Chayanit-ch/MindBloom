@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { TOPICS, getMoodLabel, getMoodLabelTH, ALL_EMOTIONS, getEmotionsByLevel, EMOTION_TH, TOPIC_TH, WEATHER_ICON } from '../types/emotions'
 import type { DailyRecord, EmotionName } from '../types'
 import Topbar from '../components/Topbar'
 import type { BuddyState } from '../types'
 import * as LucideIcons from 'lucide-react'
-import { Check, X, ClipboardCheck, CheckCircle2 } from 'lucide-react'
+import { Check, X, ClipboardCheck } from 'lucide-react'
 
 interface CheckInPageProps {
     onSave: (record: DailyRecord) => void
@@ -12,9 +13,11 @@ interface CheckInPageProps {
     lang: 'th' | 'en'
     onToggleLang: () => void
     todayRecord?: DailyRecord
+    isAdmin?: boolean
+    onOpenAdmin?: () => void
 }
 
-export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRecord }: CheckInPageProps) {
+export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRecord, isAdmin, onOpenAdmin }: CheckInPageProps) {
     const isTH = lang === 'th'
 
     // Determine initial topic state — if saved topic isn't in the list, it was a custom "Other" entry
@@ -57,7 +60,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
             timestamp: Date.now(),
         }
         setShowSuccess(true)
-        setTimeout(() => onSave(record), 2500)
+        setTimeout(() => { setShowSuccess(false); onSave(record) }, 2000)
     }
 
     function displayEmotion(name: string) {
@@ -72,23 +75,21 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
 
     return (
         <div className="pt-4">
-            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} isAdmin={isAdmin} onOpenAdmin={onOpenAdmin} />
 
             {/* Success Popup */}
-            {showSuccess && (
-                <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center px-6 animate-overlay">
-                    <div className="bg-white rounded-3xl p-8 shadow-2xl text-center w-full max-w-xs animate-scale-in">
-                        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 size={32} className="text-green-500" />
+            {showSuccess && createPortal(
+                <div className="fixed inset-0 z-9999 flex items-center justify-center px-6" onClick={() => setShowSuccess(false)}>
+                    <div className="absolute inset-0 bg-black/40" />
+                    <div className="relative bg-white rounded-3xl p-8 w-full max-w-xs text-center shadow-xl">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Check size={32} className="text-green-600" />
                         </div>
-                        <h3 className="font-bold text-gray-800 text-xl mb-1">
-                            {isTH ? 'บันทึกสำเร็จ!' : 'Saved!'}
-                        </h3>
-                        <p className="text-gray-400 text-sm">
-                            {isTH ? 'บันทึกอารมณ์วันนี้เรียบร้อยแล้ว' : "Today's mood has been recorded."}
-                        </p>
+                        <p className="font-bold text-gray-800 text-lg mb-1">บันทึกอารมณ์สำเร็จ</p>
+                        <p className="text-sm text-gray-400">Bloom ได้รับพลังงานแล้ว วันนี้ทำได้ดีมากครับ</p>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Title */}
@@ -250,14 +251,14 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
             </p>
 
             {/* Popup — All Emotions */}
-            {showPopup && (
+            {showPopup && createPortal(
                 <>
                     <div
-                        className="fixed inset-0 bg-black/40 z-40 animate-overlay"
+                        className="fixed inset-0 bg-black/40 z-9998"
                         onClick={() => { setShowPopup(false); setSearch('') }}
                     />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 max-h-[80vh] flex flex-col animate-sheet">
-                        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl flex flex-col" style={{ maxHeight: '80vh' }}>
+                        <div className="shrink-0 flex items-center justify-between px-5 pt-5 pb-3">
                             <div>
                                 <h3 className="font-bold text-gray-800">
                                     {isTH ? 'อารมณ์ทั้งหมด' : 'All Emotions'}
@@ -272,7 +273,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
                             </button>
                         </div>
 
-                        <div className="px-5 pb-3">
+                        <div className="shrink-0 px-5 pb-3">
                             <input
                                 type="text"
                                 placeholder={isTH ? 'ค้นหา...' : 'Search...'}
@@ -282,7 +283,7 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
                             />
                         </div>
 
-                        <div className="overflow-y-auto flex-1 px-5 pb-8">
+                        <div className="overflow-y-auto flex-1 px-5 pb-20">
                             <div className="flex flex-wrap gap-2 pt-1">
                                 {filteredAll.map((name) => (
                                     <button
@@ -303,7 +304,8 @@ export default function CheckInPage({ onSave, buddy, lang, onToggleLang, todayRe
                             </div>
                         </div>
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     )

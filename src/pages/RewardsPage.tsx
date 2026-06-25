@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { BuddyState, DailyRecord } from '../types'
 import Topbar from '../components/Topbar'
 import { Lock, Check, Star, Flame, Sparkles, Unlock, Clock } from 'lucide-react'
@@ -23,6 +24,8 @@ interface RewardsPageProps {
     onUpdateBuddy: (buddy: BuddyState) => void
     lang: 'th' | 'en'
     onToggleLang: () => void
+    isAdmin?: boolean
+    onOpenAdmin?: () => void
 }
 
 const AVATARS = [
@@ -63,7 +66,7 @@ function PtsBadge({ cost, canAfford = true }: { cost: number; canAfford?: boolea
     )
 }
 
-export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onToggleLang }: RewardsPageProps) {
+export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onToggleLang, isAdmin, onOpenAdmin }: RewardsPageProps) {
     const [confirmItem, setConfirmItem] = useState<typeof COLLECTION_ITEMS[0] | null>(null)
     const [confirmAvatar, setConfirmAvatar] = useState<typeof AVATARS[0] | null>(null)
     const [confirmSpecial, setConfirmSpecial] = useState<typeof SPECIAL_REWARDS[0] | null>(null)
@@ -124,7 +127,7 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
 
     return (
         <div className="pt-4">
-            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} />
+            <Topbar buddy={buddy} lang={lang} onToggleLang={onToggleLang} isAdmin={isAdmin} onOpenAdmin={onOpenAdmin} />
 
             <p className="text-xs text-gray-400 font-bold tracking-widest mb-1">{isTH ? 'ความต่อเนื่อง' : 'MOMENTUM'}</p>
             <h1 className="text-2xl font-bold text-gray-800 mb-1">
@@ -309,10 +312,12 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
             </div>
 
             {/* Confirm Item */}
-            {confirmItem && (
+            {confirmItem && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setConfirmItem(null)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 animate-sheet">
+                    <div className="fixed inset-0 bg-black/40 z-9998" onClick={() => setConfirmItem(null)} />
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl"
+                         style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                    <div className="p-5 pb-20">
                         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                         <div className="text-center mb-5">
                             <p className="text-5xl mb-3">{confirmItem.emoji}</p>
@@ -337,14 +342,18 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
                             {isTH ? 'ยกเลิก' : 'Cancel'}
                         </button>
                     </div>
-                </>
+                    </div>
+                </>,
+                document.body
             )}
 
             {/* Confirm Special */}
-            {confirmSpecial && (
+            {confirmSpecial && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setConfirmSpecial(null)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 animate-sheet">
+                    <div className="fixed inset-0 bg-black/40 z-9998" onClick={() => setConfirmSpecial(null)} />
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl"
+                         style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                    <div className="p-5 pb-20">
                         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                         <div className="text-center mb-5">
                             <div className="w-16 h-16 rounded-2xl bg-[#2d5a27]/10 flex items-center justify-center mx-auto mb-3">
@@ -371,14 +380,16 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
                             {isTH ? 'ยกเลิก' : 'Cancel'}
                         </button>
                     </div>
-                </>
+                    </div>
+                </>,
+                document.body
             )}
 
             {/* Avatar Picker */}
-            {showAvatarPicker && (
+            {showAvatarPicker && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/40 z-40 animate-overlay" onClick={() => setShowAvatarPicker(false)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 max-h-[80vh] flex flex-col animate-sheet">
+                    <div className="fixed inset-0 bg-black/40 z-9998" onClick={() => setShowAvatarPicker(false)} />
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl flex flex-col" style={{ maxHeight: '80vh' }}>
                         <div className="px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
                             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
                             <h3 className="font-bold text-gray-800">{isTH ? 'เปลี่ยนตัวละคร' : 'Change Avatar'}</h3>
@@ -387,7 +398,7 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
                                 <span>{buddy.points} pts {isTH ? 'คงเหลือ' : 'available'}</span>
                             </div>
                         </div>
-                        <div className="overflow-y-auto flex-1 px-5 py-4">
+                        <div className="overflow-y-auto flex-1 px-5 py-4 pb-20">
                             {ownedAvatars.length > 0 && (
                                 <>
                                     <p className="text-xs text-gray-400 font-bold tracking-widest mb-2">{isTH ? 'ตัวละครที่มีแล้ว' : 'MY AVATARS'}</p>
@@ -434,14 +445,17 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
                             )}
                         </div>
                     </div>
-                </>
+                </>,
+                document.body
             )}
 
             {/* Confirm Avatar */}
-            {confirmAvatar && (
+            {confirmAvatar && createPortal(
                 <>
-                    <div className="fixed inset-0 bg-black/50 z-50 animate-overlay" onClick={() => setConfirmAvatar(null)} />
-                    <div className="fixed bottom-0 left-0 right-0 max-w-sm mx-auto bg-white rounded-t-3xl z-50 p-5 pb-10 animate-sheet">
+                    <div className="fixed inset-0 bg-black/50 z-9998" onClick={() => setConfirmAvatar(null)} />
+                    <div className="fixed bottom-0 left-0 right-0 z-9999 max-w-sm mx-auto bg-white rounded-t-3xl"
+                         style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                    <div className="p-5 pb-20">
                         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                         <div className="text-center mb-5">
                             <div className="h-24 flex items-center justify-center">
@@ -461,7 +475,9 @@ export default function RewardsPage({ buddy, records, onUpdateBuddy, lang, onTog
                             {isTH ? 'ยกเลิก' : 'Cancel'}
                         </button>
                     </div>
-                </>
+                    </div>
+                </>,
+                document.body
             )}
         </div>
     )

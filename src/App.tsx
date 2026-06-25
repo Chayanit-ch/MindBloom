@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { useLocalStorage } from './hooks/useLocalStorage'
+import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import Navbar from './components/Navbar'
 import BuddyPage from './pages/BuddyPage'
@@ -61,6 +62,8 @@ function calculateStreak(records: DailyRecord[]): number {
 export default function App() {
     const [user, setUser] = useState<User | null>(null)
     const [authLoading, setAuthLoading] = useState(true)
+    const [isAdmin, setIsAdmin] = useState(false)
+    const [isAdminMode, setIsAdminMode] = useState(false)
     const [page, setPage] = useState<PageName>('buddy')
     const [records, setRecords] = useState<DailyRecord[]>([])
     const [buddy, setBuddy] = useState<BuddyState>(defaultBuddy)
@@ -75,6 +78,9 @@ export default function App() {
             setUser(u)
             firestoreLoadedRef.current = false
             if (u) {
+                const token = await u.getIdTokenResult()
+                setIsAdmin(token.claims.admin === true)
+                await setDoc(doc(db, 'users', u.uid), { email: u.email ?? '' }, { merge: true })
                 const snap = await getDoc(doc(db, 'users', u.uid))
                 if (snap.exists()) {
                     const data = snap.data()
@@ -113,7 +119,7 @@ export default function App() {
         if (!user) return
         if (!dataLoaded) return
         if (!firestoreLoadedRef.current) return
-        setDoc(doc(db, 'users', user.uid), { records, buddy }, { merge: true })
+        setDoc(doc(db, 'users', user.uid), { records, buddy, email: user.email }, { merge: true })
     }, [records, buddy, user, dataLoaded])
 
     function handleCheckIn(record: DailyRecord) {
@@ -177,6 +183,8 @@ export default function App() {
                         records={records}
                         lang={lang}
                         onToggleLang={toggleLang}
+                        isAdmin={isAdmin}
+                        onOpenAdmin={() => setIsAdminMode(true)}
                     />
                 )}
                 {page === 'checkin' && (
@@ -186,6 +194,8 @@ export default function App() {
                         lang={lang}
                         onToggleLang={toggleLang}
                         todayRecord={records.find(r => r.date === getLocalDateStr())}
+                        isAdmin={isAdmin}
+                        onOpenAdmin={() => setIsAdminMode(true)}
                     />
                 )}
                 {page === 'history' && (
@@ -194,6 +204,8 @@ export default function App() {
                         buddy={buddy}
                         lang={lang}
                         onToggleLang={toggleLang}
+                        isAdmin={isAdmin}
+                        onOpenAdmin={() => setIsAdminMode(true)}
                     />
                 )}
                 {page === 'rewards' && (
@@ -203,6 +215,8 @@ export default function App() {
                         onUpdateBuddy={setBuddy}
                         lang={lang}
                         onToggleLang={toggleLang}
+                        isAdmin={isAdmin}
+                        onOpenAdmin={() => setIsAdminMode(true)}
                     />
                 )}
                 {page === 'insights' && (
@@ -211,10 +225,17 @@ export default function App() {
                         buddy={buddy}
                         lang={lang}
                         onToggleLang={toggleLang}
+                        isAdmin={isAdmin}
+                        onOpenAdmin={() => setIsAdminMode(true)}
                     />
                 )}
             </div>
             <Navbar currentPage={page} onNavigate={setPage} onSignOut={() => signOut(auth)} />
+            {isAdminMode && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <AdminPage onClose={() => setIsAdminMode(false)} />
+                </div>
+            )}
         </div>
     )
 }
